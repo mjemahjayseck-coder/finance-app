@@ -121,3 +121,30 @@ elif choice == "📜 History Register":
         
         total_all_time_profit = df_hist["Net Profit"].sum()
         st.metric(label="🎉 Total Net Profit Overall", value=f"${total_all_time_profit:.2f}")
+        import streamlit as str
+from streamlit_gsheets import GSheetsConnection
+
+# Establish the connection using the secrets we just saved
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+# 1. Read existing data
+df = conn.read(worksheet="Expenses", ttl=0)
+
+st.subheader("Manage Expenses")
+
+if not df.empty:
+    # Show the latest entries so you can see what to delete
+    st.dataframe(df.tail(5))
+    
+    # Add a button to delete the very last row
+    if st.button("❌ Delete Last Entry"):
+        # Remove the last row from the dataframe
+        df = df.iloc[:-1]
+        
+        # Clear the spreadsheet worksheet and write the updated data back
+        conn.update(worksheet="Expenses", data=df)
+        st.success("Last entry deleted successfully!")
+        st.rerun()
+else:
+    st.info("No entries found to delete.")
+    
