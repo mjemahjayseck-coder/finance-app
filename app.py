@@ -32,10 +32,6 @@ if st.button("🚀 Save Transaction", type="primary"):
     if amount > 0:
         new_entry = {
             "Date": selected_date.strftime("%Y-%m-%d"),
-if st.button("🚀 Save Transaction", type="primary"):
-    if amount > 0:
-        new_entry = {
-            "Date": selected_date.strftime("%Y-%m-%d"),
             "Type": t_type,
             "Category": category,
             "Amount": amount if t_type == "Income" else -amount
@@ -87,10 +83,11 @@ if st.session_state.transactions:
         st.write("### Day-by-Day Summary")
         daily_df = df.groupby('Date').agg({'Income': 'sum', 'Expense': 'sum', 'Amount': 'sum'}).reset_index()
         daily_df.columns = ['Date', 'Total Earned', 'Total Spent', 'Net Profit']
+        daily_df['Date'] = daily_df['Date'].dt.strftime('%Y-%m-%d')
         
         # Format for clean viewing
         for col in ['Total Earned', 'Total Spent', 'Net Profit']:
-            daily_df[col] = daily_df[col].apply(lambda x: f"${x:,.2f}")
+            daily_df[col] = daily_df[col].apply(lambda x: f"${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}")
         st.dataframe(daily_df, use_container_width=True)
         
     with tab2:
@@ -99,7 +96,7 @@ if st.session_state.transactions:
         weekly_df.columns = ['Week Commencing', 'Total Earned', 'Total Spent', 'Net Profit']
         
         for col in ['Total Earned', 'Total Spent', 'Net Profit']:
-            weekly_df[col] = weekly_df[col].apply(lambda x: f"${x:,.2f}")
+            weekly_df[col] = weekly_df[col].apply(lambda x: f"${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}")
         st.dataframe(weekly_df, use_container_width=True)
         
     with tab3:
@@ -108,7 +105,7 @@ if st.session_state.transactions:
         monthly_df.columns = ['Month (YYYY-MM)', 'Total Earned', 'Total Spent', 'Net Profit']
         
         for col in ['Total Earned', 'Total Spent', 'Net Profit']:
-            monthly_df[col] = monthly_df[col].apply(lambda x: f"${x:,.2f}")
+            monthly_df[col] = monthly_df[col].apply(lambda x: f"${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}")
         st.dataframe(monthly_df, use_container_width=True)
 
 else:
