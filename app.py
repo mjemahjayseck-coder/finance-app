@@ -32,6 +32,10 @@ if st.button("🚀 Save Transaction", type="primary"):
     if amount > 0:
         new_entry = {
             "Date": selected_date.strftime("%Y-%m-%d"),
+if st.button("🚀 Save Transaction", type="primary"):
+    if amount > 0:
+        new_entry = {
+            "Date": selected_date.strftime("%Y-%m-%d"),
             "Type": t_type,
             "Category": category,
             "Amount": amount if t_type == "Income" else -amount
@@ -39,9 +43,8 @@ if st.button("🚀 Save Transaction", type="primary"):
         st.session_state.transactions.append(new_entry)
         st.success(f"Successfully recorded {t_type}: ${amount:.2f} under {category}!")
         st.rerun()
-else:
-    if amount == 0 and st.initial_connection_meta: # internal state check protection
-        st.warning("Please enter an amount greater than 0.")
+    else:
+        st.warning("Please enter an amount greater than $0.00.")
 
 st.markdown("---")
 
