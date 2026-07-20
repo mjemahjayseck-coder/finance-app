@@ -1,15 +1,29 @@
-import streamlit as st
+        import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
 
 st.set_page_config(page_title="Finance Companion", layout="wide")
 
 st.title("💰 Ultimate Finance Companion")
 st.write("Track income, expenses, and view automated profit breakdowns.")
 
-# Initialize storage arrays in the app memory
-if "transactions" not in st.session_state:
-    st.session_state.transactions = []
+# File path to store data permanently
+DATA_FILE = "transactions.csv"
+
+# Function to load existing transactions from CSV
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    else:
+        return pd.DataFrame(columns=["Date", "Type", "Category", "Amount"])
+
+# Function to save transactions to CSV
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+
+# Load stored transactions into session
+df_data = load_data()
 
 # --- SECTION 1: LOG NEW TRANSACTION ---
 st.subheader("📝 Log Cash Flow")
@@ -25,18 +39,21 @@ with col2:
 with col3:
     amount = st.number_input("Amount ($)", min_value=0.0, step=0.01, format="%.2f")
 
-# Let users choose the date manually so they can log past/future entries accurately
 selected_date = st.date_input("Transaction Date", datetime.today())
 
 if st.button("🚀 Save Transaction", type="primary"):
     if amount > 0:
-        new_entry = {
+        new_row = pd.DataFrame([{
             "Date": selected_date.strftime("%Y-%m-%d"),
             "Type": t_type,
             "Category": category,
             "Amount": amount if t_type == "Income" else -amount
-        }
-        st.session_state.transactions.append(new_entry)
+        }])
+        
+        # Append new row and save to disk
+        df_updated = pd.concat([df_data, new_row], ignore_index=True)
+        save_data(df_updated)
+        
         st.success(f"Successfully recorded {t_type}: ${amount:.2f} under {category}!")
         st.rerun()
     else:
@@ -44,25 +61,30 @@ if st.button("🚀 Save Transaction", type="primary"):
 
 st.markdown("---")
 
-# Convert tracking list to DataFrame if it has entries
-if st.session_state.transactions:
-    df = pd.DataFrame(st.session_state.transactions)
+# Reload data for display
+df = load_data()
+
+if not df.empty:
     df['Date'] = pd.to_datetime(df['Date'])
     df['Display Amount'] = df['Amount'].apply(lambda x: f"${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}")
     
     # --- SECTION 2: VIEW & DELETE ENTRIES ---
     st.subheader("📊 Live Ledger & Deletions")
     
-    # Show clean overview table
     st.dataframe(df[["Date", "Type", "Category", "Display Amount"]], use_container_width=True)
     
-    # Dropdown system to remove wrong entries safely
+    # Dropdown system to remove wrong entries
     delete_options = [f"Row {i}: {row['Date'].strftime('%Y-%m-%d')} | {row['Type']} | {row['Category']} ({row['Display Amount']})" for i, row in df.iterrows()]
     row_to_delete = st.selectbox("Select an entry to delete if entered incorrectly:", options=delete_options)
     
     if st.button("❌ Delete Selected Entry"):
         idx = delete_options.index(row_to_delete)
-        removed = st.session_state.transactions.pop(idx)
+        df_dropped = df.drop(index=idx)
+        # Drop the temporary column before saving back to CSV
+        df_save = df_dropped[["Date", "Type", "Category", "Amount"]]
+        df_save['Date'] = df_save['Date'].dt.strftime("%Y-%m-%d")
+        save_data(df_save)
+        
         st.error("Entry deleted successfully!")
         st.rerun()
         
@@ -71,7 +93,6 @@ if st.session_state.transactions:
     # --- SECTION 3: BREAKDOWNS (DAILY, WEEKLY, MONTHLY) ---
     st.subheader("📈 Financial Breakdowns & Performance")
     
-    # Setup calculation helper columns
     df['Income'] = df['Amount'].apply(lambda x: x if x > 0 else 0)
     df['Expense'] = df['Amount'].apply(lambda x: abs(x) if x < 0 else 0)
     df['Week'] = df['Date'].dt.to_period('W').apply(lambda r: r.start_time.strftime('%Y-%m-%d'))
@@ -85,7 +106,6 @@ if st.session_state.transactions:
         daily_df.columns = ['Date', 'Total Earned', 'Total Spent', 'Net Profit']
         daily_df['Date'] = daily_df['Date'].dt.strftime('%Y-%m-%d')
         
-        # Format for clean viewing
         for col in ['Total Earned', 'Total Spent', 'Net Profit']:
             daily_df[col] = daily_df[col].apply(lambda x: f"${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}")
         st.dataframe(daily_df, use_container_width=True)
